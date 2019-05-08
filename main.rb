@@ -2,6 +2,7 @@
 # Written by Sourav Goswami
 # GNU General Public License v3.0
 require('ruby2d')
+STDOUT.sync = true
 PATH = File.dirname(__FILE__)
 
 config = IO.readlines(File.join(PATH, 'configure.conf'))
@@ -21,7 +22,7 @@ Font_Opacity = conversion.call('Font_Opacity =').to_f
 module Ruby2D def contain?(object) contains?(object.x, object.y) end end
 
 define_method(:main) do
-	$width, $height = (Width <= 0 || Height <= 0) ? [1280, 720] : [Width, Height]
+	puts "Width x Height is set to #{($width, $height = (Width <= 0 || Height <= 0) ? [1280, 720] : [Width, Height]).join(' x ')}"
 	set(width: $width, height: $height, background: 'ffffff', resizable: true, fps_cap: ($fps = FPS <= 0 ? 50 : FPS), title: Custom_Title.empty? ? 'Yet Another Colour Clock' : Custom_Title)
 
 	time = proc { |format='%H:%M:%S'| Time.new.strftime(format) }
@@ -103,7 +104,7 @@ define_method(:main) do
 		custom_image.opacity = Custom_Image_Opacity <= 0 ? 1 : Custom_Image_Opacity
 	end
 
-	font = Font.empty? ? File.join(PATH, %w(fonts Gafata Gafata-Regular.ttf)) : Font
+	puts "Using #{font = (Font.empty? | !File.readable?((__fnt = File.join(PATH, %w(fonts Gafata Gafata-Regular.ttf))))) ? __fnt : Font} font"
 	font_size = Font_Size <= 0 ? 100 : Font_Size
 	font_opacity = Font_Opacity <= 0 ? 1 : Font_Opacity
 
