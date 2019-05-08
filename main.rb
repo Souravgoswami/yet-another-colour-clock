@@ -61,13 +61,13 @@ define_method(:main) do
 
 	leaves1, leaves2, falling_speed, rotate = [], [], Array.new(Leaves) { rand(0.5..1) }, 0.step(360, 15).to_a
 	Leaves.times do
-		leaves1.push(Image.new(File.join(PATH, %w(images leaves 1.png)), x: rand(tree1.x..tree1.x + tree1.width), y: tree1.y + tree1.height / 2, z: tree1.z + 1, rotate: rotate.sample))
-		leaves2.push(Image.new(File.join(PATH, %w(images leaves 1.png)), x: rand(tree2.x..tree2.x + tree2.width), y: tree2.y + tree2.height / 2, z: tree1.z + 1, rotate: rotate.sample))
+		leaves1.push(Image.new(File.join(PATH, %w(images  leaf.png)), x: rand(tree1.x..tree1.x + tree1.width), y: tree1.y + tree1.height / 2, z: tree1.z + 1, rotate: rotate.sample))
+		leaves2.push(Image.new(File.join(PATH, %w(images leaf.png)), x: rand(tree2.x..tree2.x + tree2.width), y: tree2.y + tree2.height / 2, z: tree1.z + 1, rotate: rotate.sample))
 	end
 
 	bird_touched, bird_speeds = nil, Array.new(Birds) { rand(1.0..3.0) }
 	birds = Array.new(Birds) do
-		bird = Sprite.new(File.join(PATH, %w(images birds 1.png)), time: rand(10.0..30.0) , loop: true, clip_width: 110, color: '#000000', width: (size = rand($width/80..$width/60)), height: size)
+		bird = Sprite.new(File.join(PATH, %w(images birds.png)), time: rand(10.0..30.0) , loop: true, clip_width: 110, color: '#000000', width: (size = rand($width/80..$width/60)), height: size)
 		bird.x, bird.y, bird.z = rand($width), rand(blue_sky[blue_sky.size/2].y1), [-1001, 0].sample
 		bird.play
 		bird
