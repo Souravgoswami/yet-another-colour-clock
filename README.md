@@ -27,7 +27,7 @@ A Digital Clock with a Morning Theme Made with Ruby2D for Demonstration.
 + Scroll mouse on upper half of the window will shift the opacity of the sky.
 
 ## Configuration ⚙️
-The configuration can be found with the main.rb file, it's called configure.conf. Edit it to change the behaviour of colour clock.
+The configuration can be found with the main.rb file in the main directory (https://github.com/Souravgoswami/yet-another-colour-clock/blob/master/configure.conf), it's called configure.conf. Edit it to change the behaviour of colour clock.
 
 ## Screenshot 📸
 ![screenshot 2](https://github.com/Souravgoswami/yet-another-colour-clock/blob/master/Screenshots/b.png)
