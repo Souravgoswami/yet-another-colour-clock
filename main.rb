@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # Written by Sourav Goswami
 # GNU General Public License v3.0
-require('ruby2d')
+%w(ruby2d open3).each { |g| require(g) }
 STDOUT.sync = true
 PATH = File.dirname(__FILE__)
 
@@ -14,30 +14,25 @@ conversion = ->(option) { config.select { |opt| opt.strip.start_with?(option) }[
 %w(Width Height Custom_Text_Font_Opacity FPS Font_Size Magic_Particles Deers Reverse_Deers Birds Sky1_Quality Leaves Snow Custom_Message_Font_Size
 	Custom_Image_Width Custom_Image_Height Custom_Image_Opacity).each { |const| eval("#{const} = conversion.(%q(#{const} =)).to_i") }
 
-Borderless = conversion.call('Border =').downcase == 'true' || conversion.call('Border =').empty?
-Resizable = conversion.call('Resizable =').downcase == 'true' || conversion.call('Resizable =').empty?
-Show_Sun = conversion.call('Show_Sun =') == 'true' || conversion.call('Show_Sun =').empty?
-Font_Opacity = conversion.call('Font_Opacity =').to_f
+%w(Resizable Show_Sun).each { |el| eval("#{el} = conversion.(%Q(#{el} =)).downcase != 'false'") }
+Borderless, Font_Opacity = conversion.call('Border =').downcase == 'false', conversion.call('Font_Opacity =').to_f
 
 module Ruby2D def contain?(object) contains?(object.x, object.y) end end
 
 define_method(:main) do
 	puts "Width x Height is set to #{($width, $height = (Width <= 0 || Height <= 0) ? [1280, 720] : [Width, Height]).join(' x ')}"
-	set(width: $width, height: $height, background: 'ffffff', resizable: true, fps_cap: ($fps = FPS <= 0 ? 50 : FPS), title: Custom_Title.empty? ? 'Yet Another Colour Clock' : Custom_Title)
+	set(width: $width, height: $height, background: 'ffffff', fps_cap: ($fps = FPS <= 0 ? 50 : FPS), title: Custom_Title.empty? ? 'Yet Another Colour Clock' : Custom_Title,
+		resizable: Resizable, borderless: Borderless, fullscreen: (fullscreen = ARGV.select { |a| a =~ /[0-9]/ }[-1].to_i) % 2 != 0)
 
 	time = proc { |format='%H:%M:%S'| Time.new.strftime(format) }
-	highlighted = ->(object, threshold = 0.25) { object.opacity -= 0.075 if object.opacity > threshold }
-	not_highlighted = ->(object, threshold = 1) { object.opacity += 0.075 if object.opacity < threshold }
+	highlighted, not_highlighted = ->(obj, t = 0.25) { obj.opacity -= 0.075 if obj.opacity > t },  ->(obj, t = 1) { obj.opacity += 0.075 if obj.opacity < t }
 
-	img = Image.new(File.join(PATH, 'images', 'silhoutte.png'), z: 100, width: $width, height: $height)
-	img.x, img. y = 0, $height - img.height
-
-	sky1 = Sky1.empty? ? '#3c4fcb' : Sky1
+	img = Image.new(File.join(PATH, 'images', 'silhoutte.png'), z: 100, width: $width, height: $height, x: 0, y: 0)
 	bgcolor = '#ffffff', '#ffffff', Sky3.empty? ? '#ffe070' : Sky3, Sky2.empty? ? '#f173ac' : Sky2
 	bg = Rectangle.new color: bgcolor, width: $width, height: $height, z: -1000
 
 	sq1 = Sky1_Quality <= 0.1 ? 2 : Sky1_Quality
-	blue_sky = Array.new($height / sq1) { |t| Line.new(x2: $width, y1: t * sq1, y2: t * sq1, width: sq1, color: sky1, z: -1000, opacity:  1 - (t.to_f * sq1) / $width * 2.5) }
+	blue_sky = Array.new($height / sq1) { |t| Line.new(x2: $width, y1: t * sq1, y2: t * sq1, width: sq1, color: Sky1.empty? ? '#3c4fcb' : Sky1, z: -1000, opacity:  1 - (t.to_f * sq1) / $width * 2.5) }
 
 	stars = Array.new((blue_sky.size - 1)/2) { |temp| Square.new(size: rand(2.0..4), x: rand($width.to_f), y: blue_sky[temp].y1, opacity: blue_sky[temp].opacity) }
 	snow = Array.new(Snow) { Image.new(File.join(PATH, 'images', 'snow.png'), x: rand(0..$width), y: rand(0..$height), width: (size = rand(1.0..8)), height: size) }
@@ -66,6 +61,8 @@ define_method(:main) do
 		leaves2.push(Image.new(File.join(PATH, %w(images leaf.png)), x: rand(tree2.x..tree2.x + tree2.width), y: tree2.y + tree2.height / 2, z: tree1.z + 1, rotate: rotate.sample))
 	end
 
+	air_direction, counter, leaves_size = [-1, 0, 1].sample, 0, leaves1.size
+
 	bird_touched, bird_speeds = nil, Array.new(Birds) { rand(1.0..3.0) }
 	birds = Array.new(Birds) do
 		bird = Sprite.new(File.join(PATH, %w(images birds.png)), time: rand(10.0..30.0) , loop: true, clip_width: 110, color: '#000000', width: (size = rand($width/80..$width/60)), height: size)
@@ -74,7 +71,7 @@ define_method(:main) do
 		bird
 	end
 
-	deer_speeds = []
+	deer_speeds, rev_deer_speeds = [], []
 	deers = Array.new(Deers) do
 		speed = rand(8.0..16.0)
 		deer_speeds.push(speed / 2.0)
@@ -84,7 +81,6 @@ define_method(:main) do
 		deer
 	end
 
-	rev_deer_speeds = []
 	rev_deers = Array.new(Reverse_Deers) do
 		speed = rand(8.0..16.0)
 		rev_deer_speeds << speed / 2.0
@@ -124,11 +120,19 @@ define_method(:main) do
 	touched_obj = pressed_obj = nil
 	touchable_objects = [time_text, day_text, date_text, custom_text, custom_image]
 
+	on :key_down do |k|
+		raise SystemExit if %w(escape space).include? k.key
+		close if Open3.pipeline_start("#{File.join(RbConfig::CONFIG['bindir'], 'ruby')} #{__FILE__} #{fullscreen += 1}") if k.key == 'f11'
+	end
+
 	on :mouse_move do |e|
 		touchable_objects.each { |el| el.contain?(e) ? (( touched_obj = el) && (break)) : touched_obj = nil  }
 		sun.each_with_index { |val, i| val.x, val.y = e.x + i * 1.5, e.y + i * 1.5 } if sun_touched
 		pressed_obj.x, pressed_obj.y = e.x - pressed_obj.width / 2, e.y - pressed_obj.height / 2 if pressed_obj
+		birds.each { |val| (bird_touched = val) && (break) if val.contain?(e) }
 	end
+
+	on(:mouse_up) { pressed_obj, sun_touched = nil, false }
 
 	on :mouse_down do |e|
 		touchable_objects.each { |el| el.contain?(e) ? ((pressed_obj = el) && break) : pressed_obj = nil }
@@ -136,10 +140,6 @@ define_method(:main) do
 		bg.color = bgcolor.rotate! if e.button == :middle
 		pressed_obj = nil if e.button == :right
 	end
-
-	on(:key_down) { |k| raise SystemExit if %w(escape space).include? k.key }
-	on(:mouse_move) { |e| birds.each { |val| (bird_touched = val) && (break) if val.contain?(e) } }
-	on(:mouse_up) { pressed_obj, sun_touched = nil, false }
 
 	on :mouse_scroll do |e|
 		if get(:mouse_y) >= $height / 2
@@ -150,17 +150,14 @@ define_method(:main) do
 		end
 	end
 
-	air_direction, counter, leaves_size = [-1, 0, 1].sample, 0, leaves1.size
-
 	update do
 		counter += 1
 		touched_obj ? touchable_objects.each { |o| o.equal?(touched_obj) ? highlighted.(touched_obj) : not_highlighted.(o) } : touchable_objects.each { |o| not_highlighted.(o) }
 		pressed_obj ? touchable_objects.each { |o| o.equal?(pressed_obj) ? highlighted.(pressed_obj) : not_highlighted.(o) } : ''
 
 		time_text.text, date_text.text = time.call + ':' + time.call('%N')[0..1], time.('%D')
-
-		air_direction = [-1, 0, 1].sample if Time.new.strftime('%s').to_i % 5 == 0 and counter % $fps == 0
 		stars.sample.z = [-1001, [-500] * 3].flatten.sample
+		air_direction = [-1, 0, 1].sample if Time.new.strftime('%s').to_i % 5 == 0 and counter % $fps == 0
 
 		snow.each_with_index do |val, i|
 			val.x, val.y, val.opacity = val.x + air_direction, val.y + val.width / 2.0, val.opacity - 0.005
@@ -168,7 +165,6 @@ define_method(:main) do
 		end
 
 		bird_speeds[birds.index(bird_touched)] = 10 if bird_touched
-
 		birds.each_with_index do |val, i|
 			val.x, val.y = val.x + bird_speeds[i], val.y + Math.sin(counter / bird_speeds[i])
 			if val.x >= $width + val.width
@@ -191,9 +187,9 @@ define_method(:main) do
 
 		leaves_size.times do |i|
 			val, val2, fspeed = leaves1[i], leaves2[i], falling_speed[i]
-			val.rotate, val2.rotate = val.rotate + fspeed * 2.0, val2.rotate + fspeed * 2.0
-
 			x, y = air_direction == 0 ? [Math.sin(counter / 10.0), Math.cos(counter / 5.0) + fspeed] : [Math.sin(counter / 20.0), Math.cos(counter / 20.0) + fspeed]
+
+			val.rotate, val2.rotate = val.rotate + fspeed * 2.0, val2.rotate + fspeed * 2.0
 			val.x, val.y, val2.x, val2.y = val.x + x, val.y + y, val2.x + x, val2.y + y
 
 			val.x, val.y, val.opacity = rand(tree1.x..tree1.x + tree1.width), tree1.y + tree1.height/2, [0, 1].sample if val.y > tree1.y + tree1.height
@@ -210,8 +206,8 @@ end
 begin
 	main
 	show
-rescue SystemExit
+rescue ::SystemExit, ::Interrupt
 	puts "Have a great day!"
-rescue Exception => e
-	Kernel.warn(e)
+rescue ::Exception => e
+	::Kernel.warn(e)
 end
