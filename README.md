@@ -29,5 +29,8 @@ A Digital Clock with a Morning Theme Made with Ruby2D for Demonstration.
 ## Configuration ⚙️
 The configuration can be found with the main.rb file, it's called configure.conf. Edit it to change the behaviour of colour clock.
 
+## Screenshot 📸
+![screenshot 2](https://github.com/Souravgoswami/yet-another-colour-clock/blob/master/Screenshots/b.png)
+
 ## Bugs 🐞
 If you find any bug 🐛 or feature request, please let me know via github or email me souravgoswami@protonmail.com
